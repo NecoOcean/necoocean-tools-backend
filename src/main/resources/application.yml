@@ -1,0 +1,31 @@
+server:
+  # 只监听回环地址，公网入口是 Nginx。本机调试访问 http://127.0.0.1:8080
+  address: 127.0.0.1
+  port: 8080
+  forward-headers-strategy: native
+  servlet:
+    encoding:
+      charset: UTF-8
+      force: true
+  error:
+    whitelabel:
+      enabled: false
+    include-message: never
+    include-stacktrace: never
+    include-binding-errors: never
+
+spring:
+  application:
+    name: necoocean-tools
+  jackson:
+    property-naming-strategy: SNAKE_CASE
+    time-zone: Asia/Shanghai
+    default-property-inclusion: always
+    serialization:
+      write-dates-as-timestamps: false
+  mvc:
+    throw-exception-if-no-handler-found: true
+  web:
+    resources:
+      # 后端不托管页面和静态资源，避免未命中路径落到资源处理器后返回 HTML
+      add-mappings: false
