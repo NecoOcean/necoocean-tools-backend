@@ -35,6 +35,10 @@ class MigrationScriptTest {
         assertThat(objectStatus).contains("object_status");
         assertThat(objectStatus).contains("chk_resource_files_object_status");
 
+        String exportAudit = Files.readString(Path.of("src/main/resources/db/migration/V5__export_audit_logs.sql"));
+        assertThat(exportAudit).contains("CREATE TABLE export_audit_logs");
+        assertThat(exportAudit).contains("include_email");
+
         String seed = Files.readString(Path.of("src/main/resources/db/migration/V2__seed_reference_data.sql"));
         assertThat(seed).contains("其他工具");
         assertThat(seed).contains("message_audit_mode");
