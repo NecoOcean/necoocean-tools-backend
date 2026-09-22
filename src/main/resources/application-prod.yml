@@ -13,3 +13,7 @@ logging:
   level:
     root: INFO
     com.necoocean.tools: INFO
+
+tools:
+  security:
+    ip-hash-salt: ${IP_HASH_SALT}

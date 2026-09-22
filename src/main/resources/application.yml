@@ -63,3 +63,8 @@ spring:
     resources:
       # 后端不托管页面和静态资源，避免未命中路径落到资源处理器后返回 HTML
       add-mappings: false
+
+tools:
+  security:
+    # 与客户端 IP 拼接后再做 SHA-256。生产环境用 IP_HASH_SALT 覆盖，不要沿用这个开发默认值。
+    ip-hash-salt: ${IP_HASH_SALT:dev-only-ip-salt}

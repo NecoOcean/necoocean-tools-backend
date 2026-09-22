@@ -50,6 +50,9 @@ public class SiteSetting {
     /** 审核模式。post 为先发后审，pre 为先审后发。 */
     public static final String MESSAGE_AUDIT_MODE = "message_audit_mode";
 
+    /** 留言关键词。多条用换行或逗号分隔，只标记不拦截。缺省表示不标记。 */
+    public static final String MESSAGE_KEYWORDS = "message_keywords";
+
     /** 先发后审。一期默认。 */
     public static final String AUDIT_MODE_POST = "post";
 
@@ -71,7 +74,8 @@ public class SiteSetting {
             ABOUT_CONTENT,
             PRIVACY_CONTENT,
             MESSAGE_BOARD_ENABLED,
-            MESSAGE_AUDIT_MODE);
+            MESSAGE_AUDIT_MODE,
+            MESSAGE_KEYWORDS);
 
     @Id
     @Column(name = "key", nullable = false, length = 100)
