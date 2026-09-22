@@ -28,7 +28,6 @@ public class PasswordChangeRequest {
     public String getOldPassword() {
         return oldPassword;
     }
-
     /**
      * 写入旧口令。
      *
@@ -46,7 +45,6 @@ public class PasswordChangeRequest {
     public String getNewPassword() {
         return newPassword;
     }
-
     /**
      * 写入新口令。
      *

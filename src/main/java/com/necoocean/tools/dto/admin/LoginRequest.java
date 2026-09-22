@@ -24,7 +24,6 @@ public class LoginRequest {
     public String getUsername() {
         return username;
     }
-
     /**
      * 写入登录账号。
      *
@@ -42,7 +41,6 @@ public class LoginRequest {
     public String getPassword() {
         return password;
     }
-
     /**
      * 写入明文口令。
      *

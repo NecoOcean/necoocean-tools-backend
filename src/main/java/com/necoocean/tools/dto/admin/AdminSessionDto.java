@@ -31,7 +31,6 @@ public class AdminSessionDto {
     public String getUsername() {
         return username;
     }
-
     /**
      * 最后登录时间。
      *
@@ -40,7 +39,6 @@ public class AdminSessionDto {
     public OffsetDateTime getLastLoginAt() {
         return lastLoginAt;
     }
-
     /**
      * 只输出账号。
      *

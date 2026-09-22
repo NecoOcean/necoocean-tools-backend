@@ -36,4 +36,17 @@ public interface ReleaseNoteRepository extends JpaRepository<ReleaseNote, Intege
      */
     @Query("select note from ReleaseNote note where note.tool.id = :toolId order by note.releasedAt desc")
     Page<ReleaseNote> findPageByToolId(@Param("toolId") Integer toolId, Pageable pageable);
+
+    /**
+     * 同一工具下版本号是否已存在。
+     *
+     * @param toolId  工具主键
+     * @param version 版本号
+     * @return 已存在时为 true
+     */
+    @Query("""
+            select case when count(note) > 0 then true else false end from ReleaseNote note
+            where note.tool.id = :toolId and note.version = :version
+            """)
+    boolean existsByToolIdAndVersion(@Param("toolId") Integer toolId, @Param("version") String version);
 }
