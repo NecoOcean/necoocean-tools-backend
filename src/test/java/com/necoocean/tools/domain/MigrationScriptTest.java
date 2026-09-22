@@ -30,6 +30,11 @@ class MigrationScriptTest {
         assertThat(schema).contains("idx_messages_audit_created");
         assertThat(schema).contains("uk_resource_files_one_latest");
 
+        String objectStatus = Files
+                .readString(Path.of("src/main/resources/db/migration/V4__resource_file_object_status.sql"));
+        assertThat(objectStatus).contains("object_status");
+        assertThat(objectStatus).contains("chk_resource_files_object_status");
+
         String seed = Files.readString(Path.of("src/main/resources/db/migration/V2__seed_reference_data.sql"));
         assertThat(seed).contains("其他工具");
         assertThat(seed).contains("message_audit_mode");

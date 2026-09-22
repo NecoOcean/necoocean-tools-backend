@@ -24,3 +24,12 @@ logging:
 tools:
   security:
     ip-hash-salt: test-ip-salt
+  cos:
+    provider: memory
+    region: ap-shanghai
+    bucket: test-bucket
+    secret-id: test-id
+    secret-key: test-key
+    upload-ttl-minutes: 60
+    download-ttl-minutes: 5
+    orphan-age-hours: 24

@@ -17,6 +17,8 @@ import com.necoocean.tools.domain.repository.ResourceFileRepository;
 import com.necoocean.tools.domain.repository.SiteSettingRepository;
 import com.necoocean.tools.domain.repository.ToolCategoryRepository;
 import com.necoocean.tools.domain.repository.ToolRepository;
+import com.necoocean.tools.service.cos.CosObjectStore;
+import com.necoocean.tools.service.cos.MemoryCosObjectStore;
 
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -25,6 +27,7 @@ import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMock
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.test.web.servlet.MockMvc;
 
+import static org.hamcrest.Matchers.containsString;
 import static org.hamcrest.Matchers.nullValue;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.header;
@@ -67,10 +70,16 @@ class PublicReadWebTest {
     @Autowired
     private SiteSettingRepository settings;
 
+    @Autowired
+    private CosObjectStore cosObjectStore;
+
     private Integer fileId;
 
     @BeforeEach
     void insertPublishedTool() {
+        if (cosObjectStore instanceof MemoryCosObjectStore memory) {
+            memory.clear();
+        }
         replies.deleteAll();
         messages.deleteAll();
         resourceFiles.deleteAll();
@@ -241,12 +250,18 @@ class PublicReadWebTest {
     }
 
     @Test
-    void downloadRejectsMissingAndUnsignedFiles() throws Exception {
+    void downloadRedirectsWhenObjectExistsAndMarksMissing() throws Exception {
         mockMvc.perform(get("/download/" + fileId))
                 .andExpect(status().isNotFound())
                 .andExpect(jsonPath("$.code").value(40405));
         mockMvc.perform(get("/download/999999"))
                 .andExpect(status().isNotFound())
                 .andExpect(jsonPath("$.code").value(40404));
+
+        cosObjectStore.putObjectForTest("1/1.0.0/secret.exe", new byte[] {1});
+        mockMvc.perform(get("/download/" + fileId))
+                .andExpect(status().isFound())
+                .andExpect(header().string("Cache-Control", "no-store"))
+                .andExpect(header().string("Location", containsString("memory.local/download/")));
     }
 }

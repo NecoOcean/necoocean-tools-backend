@@ -2,6 +2,7 @@ package com.necoocean.tools;
 
 import org.springframework.boot.SpringApplication;
 import org.springframework.boot.autoconfigure.SpringBootApplication;
+import org.springframework.scheduling.annotation.EnableScheduling;
 
 /**
  * 后端启动入口。本进程只提供 JSON API，不渲染页面。
@@ -10,6 +11,7 @@ import org.springframework.boot.autoconfigure.SpringBootApplication;
  * @date 2026/09/21
  */
 @SpringBootApplication
+@EnableScheduling
 public class ToolsApplication {
 
     /**

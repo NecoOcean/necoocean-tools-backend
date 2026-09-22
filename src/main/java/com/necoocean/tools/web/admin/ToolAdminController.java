@@ -8,6 +8,9 @@ import com.necoocean.tools.dto.admin.ToolAdminDto;
 import com.necoocean.tools.dto.admin.ToolCreateRequest;
 import com.necoocean.tools.dto.admin.ToolStatusRequest;
 import com.necoocean.tools.dto.admin.ToolUpdateRequest;
+import com.necoocean.tools.dto.admin.UploadTicketDto;
+import com.necoocean.tools.dto.admin.UploadTicketRequest;
+import com.necoocean.tools.service.FileUploadService;
 import com.necoocean.tools.service.ToolAdminService;
 
 import jakarta.servlet.http.HttpServletResponse;
@@ -25,7 +28,7 @@ import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
 /**
- * 后台工具管理。C-13 ~ C-19。
+ * 后台工具管理。C-13 ~ C-19、C-28。
  *
  * @author NecoOcean
  * @date 2026/09/22
@@ -36,11 +39,15 @@ public class ToolAdminController {
 
     private final ToolAdminService toolAdminService;
 
+    private final FileUploadService fileUploadService;
+
     /**
-     * @param toolAdminService 工具管理
+     * @param toolAdminService  工具管理
+     * @param fileUploadService 上传凭证
      */
-    public ToolAdminController(ToolAdminService toolAdminService) {
+    public ToolAdminController(ToolAdminService toolAdminService, FileUploadService fileUploadService) {
         this.toolAdminService = toolAdminService;
+        this.fileUploadService = fileUploadService;
     }
 
     /**
@@ -123,7 +130,7 @@ public class ToolAdminController {
     }
 
     /**
-     * 删除工具。只删库，不调对象存储。
+     * 删除工具。删库并删对象存储前缀。
      *
      * @param id       主键
      * @param response 当前响应
@@ -134,6 +141,21 @@ public class ToolAdminController {
         noStore(response);
         toolAdminService.delete(id);
         return ApiResponse.success(null);
+    }
+
+    /**
+     * 申请预签名上传凭证。
+     *
+     * @param id       工具主键
+     * @param request  请求体
+     * @param response 当前响应
+     * @return 上传凭证
+     */
+    @PostMapping("/{id}/files/upload-ticket")
+    public ApiResponse<UploadTicketDto> uploadTicket(@PathVariable("id") Integer id,
+            @RequestBody UploadTicketRequest request, HttpServletResponse response) {
+        noStore(response);
+        return ApiResponse.success(fileUploadService.createUploadTicket(id, request));
     }
 
     /**

@@ -38,6 +38,18 @@ public class ResourceFile {
     /** 新文件的下载次数。一期只累加，不展示。 */
     public static final int DEFAULT_DOWNLOAD_COUNT = 0;
 
+    /** 已签发上传凭证，等待直传完成。 */
+    public static final int OBJECT_STATUS_PENDING = 0;
+
+    /** 已登记且对象可用。 */
+    public static final int OBJECT_STATUS_READY = 1;
+
+    /** 库有记录但对象缺失。 */
+    public static final int OBJECT_STATUS_ABNORMAL = 2;
+
+    /** 上传中占位用的 SHA-256（64 个 0）。 */
+    public static final String PENDING_SHA256 = "0000000000000000000000000000000000000000000000000000000000000000";
+
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Integer id;
@@ -78,6 +90,10 @@ public class ResourceFile {
     @Column(name = "download_count", nullable = false)
     private Integer downloadCount;
 
+    @JdbcTypeCode(SqlTypes.TINYINT)
+    @Column(name = "object_status", nullable = false)
+    private Integer objectStatus;
+
     @Column(name = "created_at", nullable = false)
     private LocalDateTime createdAt;
 
@@ -85,6 +101,9 @@ public class ResourceFile {
     private void fillDefaults() {
         if (downloadCount == null) {
             downloadCount = DEFAULT_DOWNLOAD_COUNT;
+        }
+        if (objectStatus == null) {
+            objectStatus = OBJECT_STATUS_READY;
         }
         if (createdAt == null) {
             createdAt = EntityTimestamps.now();
@@ -287,6 +306,24 @@ public class ResourceFile {
      */
     public void setDownloadCount(Integer downloadCount) {
         this.downloadCount = downloadCount;
+    }
+
+    /**
+     * 对象状态。0 上传中，1 可用，2 异常。
+     *
+     * @return 状态
+     */
+    public Integer getObjectStatus() {
+        return objectStatus;
+    }
+
+    /**
+     * 写入对象状态。
+     *
+     * @param objectStatus 状态
+     */
+    public void setObjectStatus(Integer objectStatus) {
+        this.objectStatus = objectStatus;
     }
 
     /**

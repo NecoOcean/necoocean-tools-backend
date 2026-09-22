@@ -13,6 +13,7 @@ import com.necoocean.tools.domain.repository.ToolRepository;
 import com.necoocean.tools.dto.admin.IsLatestRequest;
 import com.necoocean.tools.dto.admin.ResourceFileAdminDto;
 import com.necoocean.tools.dto.admin.ResourceFileUpdateRequest;
+import com.necoocean.tools.service.cos.CosObjectStore;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -22,7 +23,7 @@ import org.springframework.util.StringUtils;
 
 /**
  * 后台资源文件元信息。设推荐版本在事务内先清后置，并同步 tools.latest_version。
- * 删除只删库记录，不删对象存储。
+ * 删除时同步删对象存储。
  *
  * @author NecoOcean
  * @date 2026/09/22
@@ -42,13 +43,18 @@ public class ResourceFileAdminService {
 
     private final ToolRepository tools;
 
+    private final CosObjectStore cosObjectStore;
+
     /**
-     * @param resourceFiles 资源文件
-     * @param tools         工具
+     * @param resourceFiles  资源文件
+     * @param tools          工具
+     * @param cosObjectStore 对象存储
      */
-    public ResourceFileAdminService(ResourceFileRepository resourceFiles, ToolRepository tools) {
+    public ResourceFileAdminService(ResourceFileRepository resourceFiles, ToolRepository tools,
+            CosObjectStore cosObjectStore) {
         this.resourceFiles = resourceFiles;
         this.tools = tools;
+        this.cosObjectStore = cosObjectStore;
     }
 
     /**
@@ -110,7 +116,7 @@ public class ResourceFileAdminService {
     }
 
     /**
-     * 删除文件库记录。若删的是推荐版本，自动指定同工具最新上传文件为推荐；无文件则清空 latest_version。
+     * 删除文件：先删对象，再删库。若删的是推荐版本，自动指定同工具最新就绪文件为推荐。
      *
      * @param id 文件主键
      */
@@ -119,12 +125,14 @@ public class ResourceFileAdminService {
         ResourceFile file = requireFile(id);
         Integer toolId = file.getTool().getId();
         boolean wasLatest = Integer.valueOf(ResourceFile.LATEST).equals(file.getLatest());
+        String objectKey = file.getObjectKey();
+        cosObjectStore.deleteObject(objectKey);
         resourceFiles.delete(file);
         resourceFiles.flush();
         if (wasLatest) {
             promoteNewest(toolId);
         }
-        logger.info("resource file deleted, id={}", id);
+        logger.info("resource file deleted, id={}, key={}", id, objectKey);
     }
 
     private void markLatest(ResourceFile file) {
@@ -153,12 +161,19 @@ public class ResourceFileAdminService {
     private void promoteNewest(Integer toolId) {
         List<ResourceFile> remaining = resourceFiles.findByToolIdOrderByCreatedAtDesc(toolId);
         Tool tool = tools.findById(toolId).orElseThrow(() -> new BizException(ErrorCode.TOOL_NOT_FOUND));
-        if (remaining.isEmpty()) {
+        ResourceFile next = null;
+        for (ResourceFile candidate : remaining) {
+            if (Integer.valueOf(ResourceFile.OBJECT_STATUS_READY).equals(candidate.getObjectStatus())) {
+                next = candidate;
+                break;
+            }
+        }
+        if (next == null) {
             tool.setLatestVersion(null);
             tools.saveAndFlush(tool);
             return;
         }
-        markLatest(remaining.get(0));
+        markLatest(next);
     }
 
     private ResourceFile requireFile(Integer id) {
@@ -199,6 +214,6 @@ public class ResourceFileAdminService {
         boolean latest = Integer.valueOf(ResourceFile.LATEST).equals(file.getLatest());
         return new ResourceFileAdminDto(file.getId(), file.getVersion(), file.getDisplayName(), file.getObjectKey(),
                 file.getExt(), file.getFileSize(), file.getSha256(), file.getPlatform(), Boolean.valueOf(latest),
-                file.getDownloadCount(), EntityTimestamps.toOffset(file.getCreatedAt()));
+                file.getDownloadCount(), file.getObjectStatus(), EntityTimestamps.toOffset(file.getCreatedAt()));
     }
 }

@@ -22,6 +22,7 @@ public class ResourceFileAdminDto {
     private final String platform;
     private final Boolean latest;
     private final Integer downloadCount;
+    private final Integer objectStatus;
     private final OffsetDateTime createdAt;
 
     /**
@@ -35,10 +36,11 @@ public class ResourceFileAdminDto {
      * @param platform      平台
      * @param latest        是否推荐
      * @param downloadCount 下载次数
+     * @param objectStatus  对象状态
      * @param createdAt     上传时间
      */
     public ResourceFileAdminDto(Integer id, String version, String displayName, String objectKey, String ext,
-            Long fileSize, String sha256, String platform, Boolean latest, Integer downloadCount,
+            Long fileSize, String sha256, String platform, Boolean latest, Integer downloadCount, Integer objectStatus,
             OffsetDateTime createdAt) {
         this.id = id;
         this.version = version;
@@ -50,103 +52,95 @@ public class ResourceFileAdminDto {
         this.platform = platform;
         this.latest = latest;
         this.downloadCount = downloadCount;
+        this.objectStatus = objectStatus;
         this.createdAt = createdAt;
     }
 
     /**
-     * 读取字段。
-     *
-     * @return 值
+     * @return 主键
      */
     public Integer getId() {
         return id;
     }
+
     /**
-     * 读取字段。
-     *
-     * @return 值
+     * @return 版本
      */
     public String getVersion() {
         return version;
     }
+
     /**
-     * 读取字段。
-     *
-     * @return 值
+     * @return 文件名
      */
     public String getDisplayName() {
         return displayName;
     }
+
     /**
-     * 读取字段。
-     *
-     * @return 值
+     * @return 对象键
      */
     public String getObjectKey() {
         return objectKey;
     }
+
     /**
-     * 读取字段。
-     *
-     * @return 值
+     * @return 扩展名
      */
     public String getExt() {
         return ext;
     }
+
     /**
-     * 读取字段。
-     *
-     * @return 值
+     * @return 字节
      */
     public Long getFileSize() {
         return fileSize;
     }
+
     /**
-     * 读取字段。
-     *
-     * @return 值
+     * @return 校验值
      */
     public String getSha256() {
         return sha256;
     }
+
     /**
-     * 读取字段。
-     *
-     * @return 值
+     * @return 平台
      */
     public String getPlatform() {
         return platform;
     }
+
     /**
-     * 是否当前推荐版本。
-     *
      * @return true 表示推荐
      */
     @JsonProperty("is_latest")
     public Boolean getLatest() {
         return latest;
     }
+
     /**
-     * 读取字段。
-     *
-     * @return 值
+     * @return 下载次数
      */
     public Integer getDownloadCount() {
         return downloadCount;
     }
+
     /**
-     * 读取字段。
-     *
-     * @return 值
+     * @return 对象状态
+     */
+    public Integer getObjectStatus() {
+        return objectStatus;
+    }
+
+    /**
+     * @return 上传时间
      */
     public OffsetDateTime getCreatedAt() {
         return createdAt;
     }
-        /**
-     * 简短文本。
-     *
-     * @return 文本
-     */
+
     @Override
     public String toString() {
         return "ResourceFileAdminDto{id=" + id + '}';

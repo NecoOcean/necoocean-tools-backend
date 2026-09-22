@@ -1,5 +1,6 @@
 package com.necoocean.tools.domain.repository;
 
+import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Optional;
 
@@ -29,17 +30,18 @@ public interface ResourceFileRepository extends JpaRepository<ResourceFile, Inte
     Optional<ResourceFile> findByToolIdAndLatest(@Param("toolId") Integer toolId, @Param("latest") Integer latest);
 
     /**
-     * 某工具的全部文件。推荐版本在前，其余按上传时间倒序。
+     * 某工具已就绪文件。推荐版本在前，其余按上传时间倒序。
      *
      * @param toolId 工具主键
+     * @param status 就绪状态
      * @return 文件列表，没有时为空列表
      */
     @Query("""
             select file from ResourceFile file
-            where file.tool.id = :toolId
+            where file.tool.id = :toolId and file.objectStatus = :status
             order by file.latest desc, file.createdAt desc
             """)
-    List<ResourceFile> findByToolIdForPublic(@Param("toolId") Integer toolId);
+    List<ResourceFile> findByToolIdForPublic(@Param("toolId") Integer toolId, @Param("status") Integer status);
 
     /**
      * 某工具全部文件，按上传时间倒序。删除推荐版本后用于自动指定新推荐。
@@ -67,6 +69,37 @@ public interface ResourceFileRepository extends JpaRepository<ResourceFile, Inte
      */
     @Query("select count(file) from ResourceFile file where file.tool.id = :toolId")
     long countByToolId(@Param("toolId") Integer toolId);
+
+    /**
+     * 某工具指定状态文件条数。
+     *
+     * @param toolId 工具主键
+     * @param status 对象状态
+     * @return 条数
+     */
+    @Query("select count(file) from ResourceFile file where file.tool.id = :toolId and file.objectStatus = :status")
+    long countByToolIdAndObjectStatus(@Param("toolId") Integer toolId, @Param("status") Integer status);
+
+    /**
+     * 全部已登记对象键。
+     *
+     * @return 对象键列表
+     */
+    @Query("select file.objectKey from ResourceFile file")
+    List<String> findAllObjectKeys();
+
+    /**
+     * 超时仍未完成登记的上传占位。
+     *
+     * @param status 上传中状态
+     * @param before 早于该时间
+     * @return 占位列表
+     */
+    @Query("""
+            select file from ResourceFile file
+            where file.objectStatus = :status and file.createdAt < :before
+            """)
+    List<ResourceFile> findPendingOlderThan(@Param("status") Integer status, @Param("before") LocalDateTime before);
 
     /**
      * 清掉某工具全部推荐标记。须在同一事务内再置新推荐。

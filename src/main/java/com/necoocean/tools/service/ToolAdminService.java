@@ -25,6 +25,7 @@ import com.necoocean.tools.dto.admin.ToolCreateRequest;
 import com.necoocean.tools.dto.admin.ToolStatusRequest;
 import com.necoocean.tools.dto.admin.ToolUpdateRequest;
 import com.necoocean.tools.dto.publicapi.CategoryDto;
+import com.necoocean.tools.service.cos.CosObjectStore;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -35,7 +36,7 @@ import org.springframework.transaction.annotation.Transactional;
 import org.springframework.util.StringUtils;
 
 /**
- * 后台工具管理。删除只清库级联，不调对象存储。
+ * 后台工具管理。删除时级联清库并删 COS 前缀（含 covers/）。
  *
  * @author NecoOcean
  * @date 2026/09/22
@@ -66,16 +67,20 @@ public class ToolAdminService {
 
     private final ResourceFileRepository resourceFiles;
 
+    private final CosObjectStore cosObjectStore;
+
     /**
-     * @param tools         工具
-     * @param categories    分类
-     * @param resourceFiles 资源文件
+     * @param tools          工具
+     * @param categories     分类
+     * @param resourceFiles  资源文件
+     * @param cosObjectStore 对象存储
      */
     public ToolAdminService(ToolRepository tools, ToolCategoryRepository categories,
-            ResourceFileRepository resourceFiles) {
+            ResourceFileRepository resourceFiles, CosObjectStore cosObjectStore) {
         this.tools = tools;
         this.categories = categories;
         this.resourceFiles = resourceFiles;
+        this.cosObjectStore = cosObjectStore;
     }
 
     /**
@@ -196,19 +201,21 @@ public class ToolAdminService {
     }
 
     /**
-     * 删除工具。级联由数据库完成，本步不删对象存储。
+     * 删除工具。先删 COS 前缀，再删库（级联元数据）。
      *
      * @param id 主键
      */
     @Transactional(rollbackFor = Exception.class)
     public void delete(Integer id) {
         Tool tool = requireTool(id);
+        cosObjectStore.deleteByPrefix(tool.getId() + "/");
+        cosObjectStore.deleteByPrefix("covers/" + tool.getId() + "/");
         tools.delete(tool);
         logger.info("tool deleted, id={}", id);
     }
 
     /**
-     * 存储占用。只汇总库内 file_size。
+     * 存储占用。汇总库内 file_size，并统计异常文件数。
      *
      * @param id 工具主键
      * @return 占用汇总
@@ -231,7 +238,9 @@ public class ToolAdminService {
             byVersion.add(new StorageVersionUsageDto(entry.getKey(), Long.valueOf(entry.getValue()[0]),
                     Long.valueOf(entry.getValue()[1])));
         }
-        return new StorageUsageDto(Long.valueOf(total), Long.valueOf(files.size()), byVersion);
+        long abnormal = resourceFiles.countByToolIdAndObjectStatus(id,
+                Integer.valueOf(ResourceFile.OBJECT_STATUS_ABNORMAL));
+        return new StorageUsageDto(Long.valueOf(total), Long.valueOf(files.size()), Long.valueOf(abnormal), byVersion);
     }
 
     private Tool requireTool(Integer id) {

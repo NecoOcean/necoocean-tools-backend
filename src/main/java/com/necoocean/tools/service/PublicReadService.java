@@ -29,6 +29,7 @@ import com.necoocean.tools.dto.publicapi.ResourceFilePublicDto;
 import com.necoocean.tools.dto.publicapi.SiteInfoDto;
 import com.necoocean.tools.dto.publicapi.ToolCardDto;
 import com.necoocean.tools.dto.publicapi.ToolDetailDto;
+import com.necoocean.tools.service.cos.CosObjectStore;
 
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
@@ -37,7 +38,7 @@ import org.springframework.transaction.annotation.Transactional;
 import org.springframework.util.StringUtils;
 
 /**
- * 公开读。只装配白名单字段；封面地址在对象存储接入前保持为空。
+ * 公开读。只装配白名单字段；下载经 COS 预签名 302。
  *
  * @author NecoOcean
  * @date 2026/09/22
@@ -67,23 +68,32 @@ public class PublicReadService {
 
     private final SiteSettingRepository siteSettingRepository;
 
+    private final CosObjectStore cosObjectStore;
+
+    private final ResourceFileStatusService resourceFileStatusService;
+
     /**
-     * @param toolRepository          工具
-     * @param releaseNoteRepository   更新日志
-     * @param resourceFileRepository  资源文件
-     * @param messageRepository       留言
-     * @param messageReplyRepository  回复
-     * @param siteSettingRepository   站点配置
+     * @param toolRepository             工具
+     * @param releaseNoteRepository      更新日志
+     * @param resourceFileRepository     资源文件
+     * @param messageRepository          留言
+     * @param messageReplyRepository     回复
+     * @param siteSettingRepository      站点配置
+     * @param cosObjectStore             对象存储
+     * @param resourceFileStatusService  状态短事务
      */
     public PublicReadService(ToolRepository toolRepository, ReleaseNoteRepository releaseNoteRepository,
             ResourceFileRepository resourceFileRepository, MessageRepository messageRepository,
-            MessageReplyRepository messageReplyRepository, SiteSettingRepository siteSettingRepository) {
+            MessageReplyRepository messageReplyRepository, SiteSettingRepository siteSettingRepository,
+            CosObjectStore cosObjectStore, ResourceFileStatusService resourceFileStatusService) {
         this.toolRepository = toolRepository;
         this.releaseNoteRepository = releaseNoteRepository;
         this.resourceFileRepository = resourceFileRepository;
         this.messageRepository = messageRepository;
         this.messageReplyRepository = messageReplyRepository;
         this.siteSettingRepository = siteSettingRepository;
+        this.cosObjectStore = cosObjectStore;
+        this.resourceFileStatusService = resourceFileStatusService;
     }
 
     /**
@@ -150,7 +160,8 @@ public class PublicReadService {
     @Transactional(readOnly = true, rollbackFor = Exception.class)
     public PublicListDto<ResourceFilePublicDto> listFiles(String slug) {
         Tool tool = requirePublished(slug);
-        List<ResourceFile> files = resourceFileRepository.findByToolIdForPublic(tool.getId());
+        List<ResourceFile> files = resourceFileRepository.findByToolIdForPublic(tool.getId(),
+                Integer.valueOf(ResourceFile.OBJECT_STATUS_READY));
         List<ResourceFilePublicDto> items = new ArrayList<ResourceFilePublicDto>(files.size());
         for (ResourceFile file : files) {
             items.add(toFile(file));
@@ -193,17 +204,33 @@ public class PublicReadService {
     }
 
     /**
-     * 确认文件属于已上架工具。签名下载留到对象存储接入，在此之前返回 40405。
+     * 校验文件并签发下载地址。对象缺失时标记异常并返回 40405。
      *
      * @param fileId 文件主键
+     * @return 预签名下载 URL
      */
-    @Transactional(readOnly = true, rollbackFor = Exception.class)
-    public void requireStoredFile(Integer fileId) {
+    @Transactional(rollbackFor = Exception.class)
+    public String prepareDownload(Integer fileId) {
         ResourceFile file = resourceFileRepository.findById(fileId).orElse(null);
         if (file == null || !Integer.valueOf(Tool.STATUS_PUBLISHED).equals(file.getTool().getStatus())) {
             throw new BizException(ErrorCode.FILE_NOT_FOUND);
         }
-        throw new BizException(ErrorCode.OBJECT_MISSING);
+        Integer status = file.getObjectStatus();
+        if (!Integer.valueOf(ResourceFile.OBJECT_STATUS_READY).equals(status)
+                && !Integer.valueOf(ResourceFile.OBJECT_STATUS_ABNORMAL).equals(status)) {
+            throw new BizException(ErrorCode.FILE_NOT_FOUND);
+        }
+        if (!cosObjectStore.objectExists(file.getObjectKey())) {
+            resourceFileStatusService.markAbnormal(file.getId());
+            throw new BizException(ErrorCode.OBJECT_MISSING);
+        }
+        if (Integer.valueOf(ResourceFile.OBJECT_STATUS_ABNORMAL).equals(status)) {
+            file.setObjectStatus(Integer.valueOf(ResourceFile.OBJECT_STATUS_READY));
+        }
+        int count = file.getDownloadCount() == null ? 0 : file.getDownloadCount().intValue();
+        file.setDownloadCount(Integer.valueOf(count + 1));
+        resourceFileRepository.saveAndFlush(file);
+        return cosObjectStore.generateDownloadUrl(file.getObjectKey(), file.getDisplayName());
     }
 
     private Tool requirePublished(String slug) {
