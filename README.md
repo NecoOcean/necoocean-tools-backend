@@ -4,7 +4,7 @@ NecoOcean 个人工具展示站的后端。只提供 JSON API，不渲染页面�
 
 架构、接口和字段以文档仓库为准：[necoocean-vault-docs](https://github.com/NecoOcean/necoocean-vault-docs)。
 
-《系统设计文档》开发顺序已完成前四步：日志骨架、统一契约、数据层（Flyway + JPA）、认证会话（Cookie 会话、CSRF、登录锁定）。下一步是公开读接口 C-01～C-06、C-08。
+《系统设计文档》开发顺序已在本地完成前五步：日志骨架、统一契约、数据层（Flyway + JPA）、认证会话（Cookie 会话、CSRF、登录锁定）、公开读（C-01～C-04、C-06、C-08）。`GET /download/{file_id}` 会校验文件是否存在、所属工具是否上架；对象存储签名还未接入，因此已上架文件返回 `40405`，也不累加下载次数。下一步是留言提交 C-07。
 
 ## 构建
 

@@ -1,4 +1,4 @@
 /**
- * 公开接口输出对象。类名以 Dto 结尾，从类型上排除管理员可见字段。
+ * 公开接口的白名单输出。不包含邮箱、IP 哈希和对象键。
  */
 package com.necoocean.tools.dto.publicapi;
