@@ -1,4 +1,4 @@
 /**
- * 安全横切。限流、CSRF 和登录锁定后续放在这里，不散落到 Controller。
+ * 安全横切。认证会话、CSRF、登录锁定和首次管理员创建放在这里。
  */
 package com.necoocean.tools.security;

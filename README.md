@@ -2,9 +2,9 @@
 
 NecoOcean 个人工具展示站的后端。只提供 JSON API，不渲染页面。
 
-架构、接口和字段仍以文档仓库为准：`../doc/前后端分离架构说明.md`、`../doc/附录C-接口清单与统一约定.md`、`../doc/系统设计文档.md`。按架构说明，这个目录以后应独立成仓库。当前先放在文档仓库里，方便直接构建。
+架构、接口和字段以文档仓库为准：[necoocean-vault-docs](https://github.com/NecoOcean/necoocean-vault-docs)。
 
-本骨架完成《系统设计文档》开发顺序的前两步：日志骨架，以及统一契约（信封、错误码、分页、全局异常）。数据层、登录、业务接口还没有开始。
+《系统设计文档》开发顺序已完成前四步：日志骨架、统一契约、数据层（Flyway + JPA）、认证会话（Cookie 会话、CSRF、登录锁定）。下一步是公开读接口 C-01～C-06、C-08。
 
 ## 构建
 
@@ -16,7 +16,7 @@ $env:Path = "$env:JAVA_HOME\bin;" + $env:Path
 mvn -B verify
 ```
 
-`mvn -B verify` 是合并前的门禁：编译、42 个单元测试、Checkstyle、阿里 p3c（PMD）、JaCoCo 行覆盖率不低于 70%。
+`mvn -B verify` 是合并前的门禁：编译、单元测试、Checkstyle、阿里 p3c（PMD）、JaCoCo 行覆盖率不低于 70%。没有 Docker 时，MySQL 8.4 的 Flyway 集成测试会跳过。
 
 本地启动：
 
@@ -25,6 +25,10 @@ mvn -B spring-boot:run
 ```
 
 进程只监听 `127.0.0.1:8080`。存活探测：`GET /api/v1/public/health`。
+
+库需要事先建好，脚本是 `src/main/resources/db/create_database.sql`。表和预置分类、站点配置由 Flyway 在启动时写入。连接用环境变量 `DB_URL`、`DB_USERNAME`、`DB_PASSWORD`，本机可以把它们放在已忽略的 `config/local.yml`。
+
+管理员不进版本库。库里还没有账号时，用 `ADMIN_USERNAME`（默认 `admin`）和 `ADMIN_PASSWORD` 创建一次；已有账号不会被覆盖。这两个变量同样放在 `config/local.yml`。
 
 ## 目录与分层
 
@@ -35,7 +39,7 @@ mvn -B spring-boot:run
 | 接入层 | `web.publicapi`、`web.admin`、`web` | 参数绑定、调用 service、装配响应 |
 | 业务层 | `service` | 审核、分类保护、限流判定等规则的唯一落点 |
 | 领域层 | `domain.entity`、`domain.repository` | 实体和 Spring Data JPA。手册里的 DAO 层落在这里 |
-| 横切层 | `common`、`logging`、`config`、`security` | 信封、异常、日志、序列化、以后的 CSRF 和限流 |
+| 横切层 | `common`、`logging`、`config`、`security` | 信封、异常、日志、序列化、CSRF、登录锁定 |
 | 调度层 | `scheduler` | 以后的残留对象清理 |
 
 不设手册中的 Manager 层。审核策略要能靠改一个默认值切换，规则再拆一层就会散掉。
@@ -53,7 +57,7 @@ mvn -B spring-boot:run
 - 异常类以 `Exception` 结尾。测试类以被测类名开头、以 `Test` 结尾。
 - 日志记录器命名为 `logger`。这是手册示例和 p3c 的豁免，不改成全大写。
 - POJO 的布尔字段不要以 `is` 开头。
-- Service / Repository 的方法使用 `get`、`list`、`count`、`save`、`remove`、`update`。骨架里还没有业务方法。
+- Service / Repository 的方法使用 `get`、`list`、`count`、`save`、`remove`、`update`。
 
 接口 JSON 使用蛇形字段，和附录 C 一致，不使用 Java 的驼峰对外。
 
@@ -100,11 +104,13 @@ JaCoCo 在 `verify` 阶段检查整包行覆盖率不低于 70%。`ToolsApplicat
 |---|---|
 | `spring-boot-starter-web` | JSON API |
 | `spring-boot-starter-validation` | 参数校验 |
+| `spring-boot-starter-security` | Cookie 会话与 CSRF |
+| `spring-boot-starter-data-jpa` | 实体与仓储 |
+| `flyway-core`、`flyway-mysql` | 启动时迁移 |
+| `mysql-connector-j` | MySQL 8 驱动 |
 | `spring-boot-starter-test` | JUnit 5、MockMvc、AssertJ |
 
-不引入 Thymeleaf、Freemarker、Lombok、JPA、MySQL、COS SDK、Spring Security。模板引擎被 Enforcer 直接禁止。不用 Lombok，是因为 p3c 只看源码，看不到生成的 `toString` 和 getter。
-
-JPA、MySQL 和 Flyway 留到数据层那一步再加。
+不引入 Thymeleaf、Freemarker、Lombok、COS SDK。模板引擎被 Enforcer 直接禁止。不用 Lombok，是因为 p3c 只看源码，看不到生成的 `toString` 和 getter。
 
 ## 规范如何进构建
 

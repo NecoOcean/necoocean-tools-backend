@@ -7,6 +7,15 @@ server:
     encoding:
       charset: UTF-8
       force: true
+    session:
+      timeout: 12h
+      cookie:
+        name: SESSION
+        http-only: true
+        secure: true
+        same-site: lax
+        path: /
+        max-age: 12h
   error:
     whitelabel:
       enabled: false
@@ -17,6 +26,31 @@ server:
 spring:
   application:
     name: necoocean-tools
+  # 库需事先建好，脚本见 db/create_database.sql。表由 Flyway 创建。
+  # 生产环境用 DB_URL、DB_USERNAME、DB_PASSWORD 覆盖下面的本机默认值。
+  # 管理员口令不写进本文件。本机口令在 config/local.yml（不进仓库）。
+  # 库里还没有账号时，用其中的 ADMIN_USERNAME（默认 admin）和 ADMIN_PASSWORD 创建一次。
+  config:
+    import: optional:file:./config/local.yml
+  datasource:
+    url: ${DB_URL:jdbc:mysql://127.0.0.1:3306/necoocean_tools?characterEncoding=UTF-8&serverTimezone=Asia/Shanghai&useSSL=false&allowPublicKeyRetrieval=true}
+    username: ${DB_USERNAME:root}
+    password: ${DB_PASSWORD:}
+    hikari:
+      connection-init-sql: SET time_zone = '+08:00'
+  jpa:
+    open-in-view: false
+    hibernate:
+      ddl-auto: validate
+    database-platform: com.necoocean.tools.config.MysqlToolsDialect
+    properties:
+      hibernate.jdbc.time_zone: Asia/Shanghai
+      hibernate.auto_quote_keyword: true
+  flyway:
+    enabled: true
+    clean-disabled: true
+    encoding: UTF-8
+    locations: classpath:db/migration
   jackson:
     property-naming-strategy: SNAKE_CASE
     time-zone: Asia/Shanghai

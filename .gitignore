@@ -1,5 +1,6 @@
 target/
 logs/
+config/local.yml
 .idea/
 *.iml
 .classpath

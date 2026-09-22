@@ -1,4 +1,4 @@
 /**
- * 后台接口。全部需要登录态，下一步接入会话后才会出现具体 Controller。
+ * 后台接口。认证会话在本包，其余管理接口后续再接。
  */
 package com.necoocean.tools.web.admin;
