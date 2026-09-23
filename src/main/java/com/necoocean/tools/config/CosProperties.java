@@ -34,6 +34,16 @@ public class CosProperties {
     private int orphanAgeHours = 24;
 
     /**
+     * 浏览器直传允许的 Origin，逗号分隔。须含本地 Vite 与生产站点来源。
+     */
+    private String corsOrigins = "http://127.0.0.1:5173,http://localhost:5173,http://127.0.0.1:4173,http://localhost:4173";
+
+    /**
+     * 启动时是否自动把 CORS 规则写入桶（需子用户具备 PutBucketCORS）。
+     */
+    private boolean corsAutoApply = true;
+
+    /**
      * 存储实现。memory 或 tencent。
      *
      * @return 实现名
@@ -159,6 +169,56 @@ public class CosProperties {
      */
     public void setOrphanAgeHours(int orphanAgeHours) {
         this.orphanAgeHours = orphanAgeHours;
+    }
+
+    /**
+     * 浏览器直传 CORS 允许的 Origin（逗号分隔原文）。
+     *
+     * @return 配置原文
+     */
+    public String getCorsOrigins() {
+        return corsOrigins;
+    }
+
+    /**
+     * @param corsOrigins 逗号分隔 Origin
+     */
+    public void setCorsOrigins(String corsOrigins) {
+        this.corsOrigins = corsOrigins;
+    }
+
+    /**
+     * 是否启动时自动写入桶 CORS。
+     *
+     * @return true 表示自动写入
+     */
+    public boolean isCorsAutoApply() {
+        return corsAutoApply;
+    }
+
+    /**
+     * @param corsAutoApply 是否自动写入
+     */
+    public void setCorsAutoApply(boolean corsAutoApply) {
+        this.corsAutoApply = corsAutoApply;
+    }
+
+    /**
+     * 解析 CORS Origin 列表（去空白、去重，保序）。
+     *
+     * @return Origin 列表
+     */
+    public java.util.List<String> resolveCorsOrigins() {
+        java.util.LinkedHashSet<String> set = new java.util.LinkedHashSet<String>();
+        if (corsOrigins != null) {
+            for (String part : corsOrigins.split(",")) {
+                String trimmed = part.trim();
+                if (!trimmed.isEmpty()) {
+                    set.add(trimmed);
+                }
+            }
+        }
+        return new java.util.ArrayList<String>(set);
     }
 
     /**

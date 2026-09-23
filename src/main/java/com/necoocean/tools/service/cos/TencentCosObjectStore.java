@@ -6,6 +6,8 @@ import java.net.URLEncoder;
 import java.nio.charset.StandardCharsets;
 import java.time.Instant;
 import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.Collections;
 import java.util.Date;
 import java.util.List;
 
@@ -16,7 +18,9 @@ import com.necoocean.tools.config.CosProperties;
 import com.qcloud.cos.COSClient;
 import com.qcloud.cos.exception.CosClientException;
 import com.qcloud.cos.http.HttpMethodName;
+import com.qcloud.cos.model.BucketCrossOriginConfiguration;
 import com.qcloud.cos.model.COSObjectSummary;
+import com.qcloud.cos.model.CORSRule;
 import com.qcloud.cos.model.DeleteObjectsRequest;
 import com.qcloud.cos.model.GeneratePresignedUrlRequest;
 import com.qcloud.cos.model.ListObjectsRequest;
@@ -55,6 +59,45 @@ public class TencentCosObjectStore implements CosObjectStore {
     public TencentCosObjectStore(COSClient cosClient, CosProperties properties) {
         this.cosClient = cosClient;
         this.properties = properties;
+        ensureBrowserCors();
+    }
+
+    /**
+     * 为浏览器直传写入桶 CORS。缺配置时浏览器 PUT 会表现为 Failed to fetch。
+     */
+    public void ensureBrowserCors() {
+        if (!properties.isCorsAutoApply()) {
+            logger.info("COS CORS auto-apply disabled");
+            return;
+        }
+        List<String> origins = properties.resolveCorsOrigins();
+        if (origins.isEmpty()) {
+            logger.warn("COS CORS origins empty; browser direct upload will fail with Failed to fetch");
+            return;
+        }
+        try {
+            CORSRule rule = new CORSRule();
+            rule.setId("necoocean-browser-upload");
+            rule.setAllowedOrigins(origins);
+            rule.setAllowedMethods(Arrays.asList(
+                    CORSRule.AllowedMethods.PUT,
+                    CORSRule.AllowedMethods.GET,
+                    CORSRule.AllowedMethods.HEAD,
+                    CORSRule.AllowedMethods.POST));
+            rule.setAllowedHeaders(Collections.singletonList("*"));
+            rule.setExposedHeaders(Arrays.asList("ETag", "Content-Length", "x-cos-request-id"));
+            rule.setMaxAgeSeconds(3600);
+
+            BucketCrossOriginConfiguration configuration = new BucketCrossOriginConfiguration();
+            configuration.setRules(Collections.singletonList(rule));
+            cosClient.setBucketCrossOriginConfiguration(properties.getBucket(), configuration);
+            logger.info("COS bucket CORS applied, bucket={}, origins={}", properties.getBucket(), origins);
+        } catch (CosClientException exception) {
+            logger.error(
+                    "Failed to apply COS bucket CORS (browser upload will show Failed to fetch). "
+                            + "Grant PutBucketCORS to the sub-user or set CORS manually in console. origins={}",
+                    origins, exception);
+        }
     }
 
     @Override
