@@ -17,6 +17,9 @@ public class CosProperties {
     /** 真实腾讯云 COS。 */
     public static final String PROVIDER_TENCENT = "tencent";
 
+    /** CORS Origin 列表的分隔符。 */
+    private static final String CORS_ORIGIN_SEPARATOR = ",";
+
     private String provider = PROVIDER_TENCENT;
 
     private String region = "";
@@ -211,7 +214,7 @@ public class CosProperties {
     public java.util.List<String> resolveCorsOrigins() {
         java.util.LinkedHashSet<String> set = new java.util.LinkedHashSet<String>();
         if (corsOrigins != null) {
-            for (String part : corsOrigins.split(",")) {
+            for (String part : corsOrigins.split(CORS_ORIGIN_SEPARATOR)) {
                 String trimmed = part.trim();
                 if (!trimmed.isEmpty()) {
                     set.add(trimmed);
